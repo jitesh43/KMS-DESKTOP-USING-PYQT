@@ -1,0 +1,429 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+This program creates a GUI for Knowledge Management System(KMS).
+Author: Jitesh Agrawal
+Last Edited: Oct 2012
+"""
+
+
+
+
+################--------IMPORT MODULE'S------#####################
+
+import sys
+from PySide import QtCore
+from PySide import QtGui,QtXml
+
+from PySide.QtCore import *
+from PySide.QtGui import *
+from functools import partial
+import sys, os, xmlrpclib, time, urllib2, pickle, StringIO, cStringIO, re
+
+################--------GLOBAL VARIABLES------#####################
+
+
+g_username = ''
+g_password = ''
+g_url = 'http://164.100.28.21:15007/intradit/' 
+serverObject = ''
+g_logout = 1
+logout_msg = 0
+default_params=''
+data = [70, 90, 20, 50]
+
+
+################--------GLOBAL VARIABLES------#####################
+
+def getServerDeskChat():
+   global serverObject
+   if type(serverObject)==type(''):
+      target = parseData()
+      serverObject = xmlrpclib.ServerProxy(target)
+   try:
+      localServerObject = serverObject.RPC2
+      print 'localServerObject'
+      return localServerObject
+   except:
+      serverObject = ''
+      QMessageBox.information(None, 'Server Connection error', "Could not connect to server.")
+      return ''
+      #	return serverObject.RPC2
+
+def authenticate():
+   global g_username, serverObject, g_password, g_url
+   serverObject_ = getServerDeskChat()
+   userPortal= serverObject_.verifyDesktopUser()
+   print userPortal
+   print '####'
+   if userPortal==g_username:
+      #serverObject_.DesktopSessionScript(g_username)
+      return True
+   else:
+      g_username = g_password = serverObject = ''
+   QMessageBox.information(None, 'Login error', "The Username/Password is not correct. Please enter valid credentials.")
+   return False
+
+def parseData():
+   global g_url, g_username, g_password
+   userid_ = g_username[:]
+   passwd = g_password[:]
+   preurl_, url_ = parseURL(g_url)
+   print preurl_+userid_+':'+passwd+'@'+url_
+   return preurl_+userid_+':'+passwd+'@'+url_
+
+def parseURL(url_):
+   global g_url
+   preurl_ = url_ = '' 
+   if g_url.find('http://')==-1:
+      g_url = 'http://'+g_url
+   if g_url.find('http://')!=-1:
+      preurl_ = 'http://'
+      url_splt = g_url.split('http://')
+      url_ = url_splt[1]
+   if g_url.find('https://')!=-1:
+      preurl_ = 'https://'		
+      url_splt = g_url.split('https://')
+      url_ = url_splt[1]
+   return preurl_, url_
+
+  
+       
+    #self.grid.removeWidget( self.default_label )
+     #  if eoffice_scan!='':
+          #eoffice_scan.setDefaults(default_params)
+          #eoffice_scan.onClose()
+          #eoffice_scan = ''
+          #clearDefaults()
+          #self.updateDisplay(False)
+          #self.loggedin()
+          #self.parent.logout()
+          #self.setFixedSize(280, 350)
+#	  self.setFixedSize(200, 350)
+
+def clearSession():
+   if g_logout==1:
+      print g_logout
+      return
+   #print 'logout'
+   serverObject_ = getServerDeskChat()
+   serverObject_.sessionLogoutScript(g_username)
+
+def clearDefaults():
+	global g_username, g_password, serverObject
+	clearSession()
+	g_username = ''
+	g_password = ''
+	#g_url = '' 
+	serverObject = ''
+	g_logout = 1
+	
+
+
+
+
+
+
+#-_-_-_-_-_-_-_-_CLASS AND FUNCTION_-_-_-_-_-_-_-_-_-_-_#
+
+class KMS(QtGui.QMainWindow):
+    
+    def __init__(self):
+      super(KMS, self).__init__()
+      self.userid=''
+      self.password=''
+      self.initUI()
+        
+    def initUI(self):
+        self.kmsloginwidget=kmsloginwidget()
+        #self.kmsloginwidget.setparent(self)
+        #self.loginDisplayShow()
+        #self.createToolBar()
+
+    def createToolBar(self):
+        exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), '&Exit', self)
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.setStatusTip('Exit application')
+        exitAction.triggered.connect(self.kmsloginwidget.logout)
+        self.filemenu.addAction(exitAction)
+        #exitAction.triggered.connect(self.close)
+        #self.statusBar()
+        #menubar = self.menuBar()
+        #fileMenu = menubar.addMenu('&File')
+        #fileMenu.addAction(exitAction)
+        #self.show()
+
+        
+   
+class kmsloginwidget(QWidget):
+ def __init__(self):
+   super(kmsloginwidget, self).__init__()
+   self.grid = QtGui.QGridLayout()
+   self.grid.setSpacing(10)
+   self.Login_Window() 
+   
+ def Login_Window(self):
+   self.userlabel=QtGui.QLabel('Login ID :- ',self)
+   self.passwordlabel=QtGui.QLabel('Password :- ',self)  
+   self.userid = QtGui.QLineEdit(self)
+   self.password = QtGui.QLineEdit(self)
+   self.password.setEchoMode(QtGui.QLineEdit.Password)  
+   self.btn = QtGui.QPushButton('Login', self)
+   self.btn.clicked.connect(self.Login_Button)
+   self.grid.addWidget(self.userlabel, 1, 0)
+   self.grid.addWidget(self.userlabel,1,0)
+   self.grid.addWidget(self.passwordlabel,2,0)
+   self.grid.addWidget(self.userid,1,1)
+   self.grid.addWidget(self.password,2,1)
+   self.grid.addWidget(self.btn,3,1)
+   self.setLayout(self.grid)
+   self.setFixedSize(220, 120)
+   self.setGeometry(375, 220, 220, 120)
+   self.setWindowTitle('KMS Login')
+   self.setWindowIcon(QtGui.QIcon('kms.png'))
+   self.userid.setText('sankalp.agarwal')
+   self.password.setText('sankalp.agarwal')
+   self.Login_Button()
+   self.show()
+
+ def Main_Window(self):
+   global default_params,g_logout
+   g_logout = 0
+   default_params='main'
+   grid_main = self.grid
+   #self.listview = QTreeView()
+   #self.treeview.showColumn(1)
+   #obj = QObject()
+   #m = QtCore.QAbstractItemModel(obj)
+   #self.treeview.setModel(m)
+   #self.listview = self.treeview
+   self.listview=QTreeWidget()
+   header=QTreeWidgetItem(["Title","Type","Modified","Creator"])
+   self.listview.setHeaderItem(header)
+   #model=DataModel()
+   #self.listview.setModel(model)
+   #self.model = QStandardItemModel()
+   #self.addhome(self.model, data)
+   #self.mainframe = QTreeView()
+   #self.mainframe.setModel(self.model)   
+   #self.mainframe.connect(self.mainframe, QtCore.SIGNAL('clicked(QModelIndex)'), partial(self.treefunction, 'objid1'))
+   
+   self.home = QtGui.QPushButton('KMS Home', self)   
+   self.home.clicked[bool].connect(self.kmsframe)   
+   self.cr = QtGui.QPushButton('My Repository', self) 
+   self.cr.clicked[bool].connect(self.kmsframe)
+   self.mr = QtGui.QPushButton('Central Repository', self)   
+   self.mr.clicked[bool].connect(self.kmsframe)   
+   self.logout = QtGui.QPushButton('Logout', self)  
+   self.connect(self.logout, QtCore.SIGNAL("clicked()"), self.button_clicked)   
+   grid_main.addWidget(self.home, 1, 0)
+   grid_main.addWidget(self.cr, 2, 0)
+   grid_main.addWidget(self.mr, 3, 0)
+   grid_main.addWidget(self.logout, 4, 0)
+   grid_main.addWidget(self.listview, 1, 1,5,3)
+   self.setLayout(grid_main)
+   self.setFixedSize(750,500)  
+   self.setGeometry(375, 220, 750, 500)
+   self.setWindowTitle('Knowledge Management System')
+   self.setWindowIcon(QtGui.QIcon('kms.png'))   
+   self.show()
+
+ def treefunction(self,index, id_):
+    print id_
+
+ 
+ def addhome(self, parent, elements):
+    self.model.setHorizontalHeaderLabels (['Title','Modified','Creator'])
+    import datetime
+    d = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    name = QStandardItem("Siraj")
+    name1 = QStandardItem(d)
+    name2 = QStandardItem(d)
+    parent.appendRow([name, name1, name2])    
+   
+
+ def button_clicked(self):
+    print "close the window"
+    self.close()
+    self.mainwindowhide()
+    self.Login_Window()
+
+ def logout(self):
+    global default_params
+    #print default_params 
+    if default_params != '':
+       print 'close confirm main'
+       reply=QtGui.QMessageBox.Question(self,'Message', "Are you sure to quit?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+       if reply == QtGui.QMessageBox.Yes:
+            event.accept()
+            clearDefaults()
+       else:
+            event.ignore()        
+    else:
+       
+       reply=QtGui.QMessageBox.Question(self,'Message', "Are you sure to quit?", QtGui.QMessageBox.Yes | 
+            QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+       if reply == QtGui.QMessageBox.Yes:
+            event.accept()
+            clearDefaults()
+       else:
+            event.ignore() 
+
+ def closeEvent(self, event):
+    global default_params
+    if default_params != '':
+     reply=QtGui.QMessageBox.question(self,'Message', "Are you sure you want to Logout?", QtGui.QMessageBox.Yes | QtGui.QMessageBox.No, QtGui.QMessageBox.No)
+     if reply == QtGui.QMessageBox.Yes:
+       event.accept()
+       clearDefaults()
+     else:
+       event.ignore()     
+    else:
+       event.accept()
+           
+ def kmsframe(self, pressed):
+     source = self.sender()
+     if pressed:
+        val = 255
+     else:
+        val = 0
+   
+     if source.text() == "KMS Home":
+      serverObject_ = getServerDeskChat()
+      #global g_url
+      #l_url=g_url+'/main_page_xml'
+      start=0
+      end=10
+      main_page_dic=serverObject_.kms_main_page_xml(start,end)
+      print 'home'
+      item = self.listview
+      items = []
+      #print main_page_dic
+     
+      for j in main_page_dic:
+        listofdata= main_page_dic[j]
+        item = QTreeWidgetItem()        
+        item.setText(0, unicode(listofdata[0]))
+        item.setText(1, unicode(listofdata[1]))
+        item.setText(2, unicode(listofdata[7]))
+        item.setText(3, unicode(listofdata[13]))
+        items.append(item)
+        childlist=['Description : '+listofdata[3],'Attachment : '+listofdata[2],'Attachment : '+listofdata[2],'Atfiletype : '+listofdata[4],'Link : '+listofdata[5],'Author : '+listofdata[6],'Keywords : '+listofdata[8],'Category : '+listofdata[9],'Audience : '+listofdata[10],'Reference : '+listofdata[11],'Language : '+listofdata[12]]        
+        for child in childlist:
+           citems=QTreeWidgetItem(item)
+           citems.setText(0,child)
+           self.listview.insertTopLevelItems(0, items)
+
+
+                   
+     elif source.text() == "My Repository":
+       serverObject_ = getServerDeskChat()
+       global g_username
+       path='/Members/'+g_username
+       #print path
+       s=serverObject_.kms_page_xml(path)
+       print 'mr'
+       print s
+       
+       
+     elif source.text() == "Central Repository":
+       serverObject_ = getServerDeskChat()
+       path='/document-library'
+       print 'cr'
+       s=serverObject_.kms_page_xml(path)
+       print s
+     
+
+     elif source.text() == "Logout":
+       self.closeEvent(self.pressed)   
+
+ def Login_Button(self):
+   global g_username,g_password
+   g_username=self.userid.text()
+   g_password = self.password.text()
+   ret_=authenticate()
+   if ret_==True:
+     self.loginDisplayHide()
+     print 'Succesfully'
+     self.Main_Window()
+   elif ret_==False:
+     self.password.setText('')
+     clearDefaults()
+
+
+ def loginDisplayHide(self):
+   self.userlabel.hide()
+   self.passwordlabel.hide()
+   self.userid.hide()
+   self.password.hide()
+   self.btn.hide()
+   #self.grid_main.hide()
+
+
+ def mainwindowhide(self):
+   global default_params
+   default_params=''
+   self.mainframe.hide()
+   self.cr.hide()
+   self.mr.hide()
+   self.home.hide()
+   self.logout.hide()
+
+ def createToolBar(self):
+   self.exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), '&Exit', self)
+   self.exitAction.setShortcut('Ctrl+Q')
+   self.exitAction.setStatusTip('Exit application')
+   self.exitAction.triggered.connect(self.close)
+   self.menubar = self.menuBar()
+   self.fileMenu = self.menubar.addMenu('&File')
+   self.fileMenu.addAction(exitAction)
+
+class DataModel(QAbstractListModel):
+    def __init__(self,datalisted=[],parent=None):
+        QAbstractListModel.__init__(self,parent)
+        #modelIndex = QModelIndex()
+        #modelIndex.child(0, 1)
+        self._data = datalisted
+        #lst = ["Title", "Date Modified", "Creator"]
+        #variant = QtCore.QVariant.fromList(lst)
+        #self.setHeaderData(1, Qt.Vertical, lst)
+        
+    def rowCount(self, parent):
+       return len(self._data)
+
+    def headerData(self,section,orientation,role):
+       if role==Qt.DisplayRole:
+          if orientation==Qt.Horizontal:
+             return section
+          else:
+             return 'Vertical'
+             
+    def data(self, index, role):
+
+       if role == Qt.ToolTipRole:
+          row=index.row()
+          value=self._data[row]
+          return value
+          
+       if role == Qt.DisplayRole:
+          row=index.row()
+          value=self._data[row]
+          return value
+
+
+
+#-_-_-_-_-_-_-_-_MAIN FUNCTION_-_-_-_-_-_-_-_-_-_-_#       
+
+def main():    
+    app = QtGui.QApplication(sys.argv)
+    ex = KMS()
+    sys.exit(app.exec_())    
+
+
+
+#-_-_-_-_-_-_-_-_CALLING MAIN FUNCTION_-_-_-_-_-_-_-_-_-_-_#
+
+if __name__ == '__main__':
+    main()
+    #window = Window()

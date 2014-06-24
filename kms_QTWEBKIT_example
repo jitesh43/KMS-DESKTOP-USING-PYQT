@@ -1,0 +1,438 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+GUI for Knowledge Management System(KMS).
+Author: Jitesh Agrawal
+Last Edited: Oct 2012
+"""
+
+"""
+####---------Program Flow----------####
+
+1.KMS()
+  a. initUI()
+  b. kmsloginwidget()
+  c. Login_Window()
+  d. Login_Button()
+  e. authenticate()
+  f. getServerDeskKMS()
+  g. parseData()
+
+
+"""
+
+g_username = ''
+g_password = ''
+g_url = 'http://10.248.85.133/'
+serverObject = ''
+g_logout = 1
+logout_msg = 0
+default_params=''
+g_start=0
+g_end=20
+g_path=''
+g_repository=''
+
+################--------IMPORT MODULE'S------#####################
+import sys, os, xmlrpclib, time, urllib2, pickle, StringIO, cStringIO, re, zipfile
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+from sys import argv
+from functools import partial
+import pickle, os, xmlrpclib, urllib
+from math import pow
+import base64
+from PyQt4.QtWebKit import *
+import webbrowser
+g_filename = ""
+
+
+
+####------GLOBAL VARIABLES------####
+g_apppath = os.path.abspath(os.path.dirname(argv[0]))
+
+
+####------CLASSES------####
+
+
+def getImagesPath():
+        path = os.path.abspath(os.path.dirname(argv[0]))
+        path = "file:///"+path+os.sep
+	print path
+        return path
+
+
+def parseURLKMS(url_):
+	global g_url
+	preurl_ = url_ = '' 
+	if g_url.find('http')==-1:
+		if g_url.find('https')==-1:
+			g_url = 'http://'+g_url
+		else:
+			g_url = 'https://'+g_url
+	if g_url.find('http://')!=-1:
+		preurl_ = 'http://'
+		url_splt = g_url.split('http://')
+		url_ = url_splt[1]
+	if g_url.find('https://')!=-1:
+		preurl_ = 'https://'		
+		url_splt = g_url.split('https://')
+		url_ = url_splt[1]
+	return preurl_, url_
+
+def parseDataKMS():
+	global g_url, g_username, g_password
+	userid_ = g_username[:]
+	passwd = g_password[:]
+	preurl_, url_ = parseURLKMS(g_url)
+	print '_______________________'
+	print preurl_+userid_+':'+passwd+'@'+url_
+	print '_______________________'
+	return preurl_+userid_+':'+passwd+'@'+url_
+
+def getServerDeskChatKMS():
+	global serverObject
+	if type(serverObject)==type(''):
+		target = parseDataKMS()
+		serverObject = xmlrpclib.ServerProxy(str(target))
+		serverObject = serverObject.RPC2
+	return serverObject
+
+
+def readfile(file_name):
+	r_file=open(file_name,'r')
+	read_file=r_file.read()
+	return read_file
+
+g_jquery=readfile(g_apppath+os.sep+'jquery-1.10.1.min.js')
+g_javascript=readfile(g_apppath+os.sep+'kms_desktop_javascript.js')
+g_css=readfile(g_apppath+os.sep+'kms_desktop_css.css')
+g_path=getImagesPath()
+
+
+
+
+
+####------JAVASCRIPT AND CSS CALL ------##### 
+alertjsfn = """%s%s%s
+
+<script type="text/javascript">
+
+var globalpath = '%s';
+
+</script>
+
+"""%(g_css, g_jquery, g_javascript, g_url)
+  ####------------##### 
+
+
+class alertJSFunctions(QObject):
+	@pyqtSlot(str, result=str)
+	def getfiledetails(self, path):
+		print '############'
+		print path
+		print '###########'
+		main_page_dic=serverObject.kms_file_detail_view_xml(str(path))
+		print '###########################################'
+		print main_page_dic
+		print '###########################################'
+		return str(main_page_dic)
+
+
+	@pyqtSlot(str, result=str)
+	def openlink(self,path_link):
+		print '############'
+		print path_link
+		webbrowser.open(path_link)
+		return 'open'
+	
+
+	@pyqtSlot(str, result=str)
+	def kms_fileshare(self,share_list):
+		print '############'
+		print share_list
+		print '###########'
+		main_page_dic=serverObject.kms_desktop_mobile_sharing(str(share_list))
+		print '###########################################'
+		print main_page_dic
+		print '###########################################'
+		return str(main_page_dic)
+
+        
+
+	@pyqtSlot(str,str, result=str)
+	def getfiledownload(self, file_id,filename):
+		global g_path
+		print '############'
+		print g_path
+		print file_id
+		print filename
+		print '###########'
+		file_data=serverObject.kms_file_download(str(file_id))
+                #print file_data
+		print '################'
+
+
+		g_apppath = os.path.abspath(os.path.dirname(argv[0]))
+		#print g_apppath 
+		filepath = g_apppath+os.sep+'downloaded_files'+os.sep+filename
+		#import inspect
+		#inspect.getmembers(file_data)
+#		print file_data.__dict__keys()
+		f = open(filepath, 'w+b')
+		f.write(file_data.data)
+		f.close()
+		QMessageBox.information(None, 'File downloaded', "File was downloaded and is saved at path: "+filepath)
+		print '###########################################'
+		#print file_data
+		print '###########################################'
+		return 'sucess'
+
+
+	@pyqtSlot(str, result=str)
+	def delete_file(self, id):
+		print '############'
+		print id
+		print '###########'
+		main_page_dic=serverObject.kms_desktop_delete_filescript(str(id))
+		print '###########################################'
+		print main_page_dic
+		print '###########################################'
+		return str(main_page_dic)
+
+
+	@pyqtSlot(str, str, result=str)
+	def getemployee_details(self,selectuser,usertype):
+		print '####### ENTER #####'
+		print selectuser
+		print usertype
+		print '###########'
+		searchuser=selectuser
+		searchtype=usertype
+		emp_dic=serverObject.kms_desktop_employee_detail_script(str(selectuser),str(usertype))
+		print '###########################################'
+		print emp_dic
+		print '###########################################'
+		return str(emp_dic)
+
+
+	@pyqtSlot(str, str,str,str, result=str)
+	def getInboxData(self,select_type,path,start,end):
+		global g_username
+              
+		print select_type 
+		print start
+		print end
+		userid=serverObject.kms_verifyUser()
+		print'###################'
+		print userid
+		print '##################'
+		path1='Members/'+userid
+		print '-------------------'
+		print path1
+		print start
+		print end
+		print "came in fetching inbox data"
+		if str(select_type)=='kms_inbox':
+		 print '@@@@@@@@@@@@@@@'
+		 main_page_dic=serverObject.kms_main_page_xml(int(start),int(end),path1)
+		 print main_page_dic
+		 return str(main_page_dic)
+	        elif str(select_type)=='kms_central':
+		 print 'central'
+		 main_page_dic=serverObject.kms_page_xml(int(start),int(end),'document-library')
+		 print main_page_dic
+		 return str(main_page_dic)
+	        elif str(select_type)=='kms_my':
+		 print 'my'
+		 path='Members/'+userid
+		 print path
+		 main_page_dic=serverObject.kms_page_xml(int(start),int(end),path)
+		 print main_page_dic
+		 return str(main_page_dic)
+	        elif str(select_type)=='Folder':
+		 print 'Folder'
+		 #userid=serverObject.kms_verifyUser()
+		 #print userid
+		 #path='Members/'+userid
+		 print '----------------------------'
+
+		 print path
+		 print '----------------------------'
+
+		 main_page_dic=serverObject.kms_page_xml(int(start),int(end),str(path))
+		 print main_page_dic
+		 return str(main_page_dic)
+
+	     
+
+
+	@pyqtSlot(str, result=str)
+        def getFolderData(self,path):
+		print path
+		print "came in fetching folder data"
+	        main_page_dic=serverObject.kms_main_page_xml('0','10',path)
+	        print main_page_dic
+	        return str(main_page_dic)
+	       
+	@pyqtSlot(str, result=int)
+	def newAlert(self):
+		global g_global_alerts
+		print "came in new alerts function"
+		g_global_alerts += 1
+		self.updateAlerts("new alert message "+str(g_global_alerts))
+		return 1	
+
+	@pyqtSlot(str, result=int)
+	def updateAlerts(self, alert):
+		global g_alert_frame
+		js_fun = "newAlertUpdate('%s')" % (alert)
+		g_alert_frame.page().mainFrame().evaluateJavaScript( js_fun )
+		return 1
+
+	@pyqtSlot(str, result=int)
+	def clearAlerts(self):
+		js_fun = "clearAlerts()"
+		g_alert_frame.page().mainFrame().evaluateJavaScript( js_fun )
+		print "cleared all the alerts"
+		return 1
+
+	@pyqtSlot(str, result=int)
+	def downloadFile(self, filename):
+		print "came in download file finction with filename ",filename
+		serverObject_ = getServerDeskChat()
+		data = serverObject_.fileDownloadScript(str(filename))
+		if data==0:
+			QMessageBox.information(None, 'File download error', "File was downloaded already and it been deleted from the server.")
+			return False
+		else:
+			global g_urls, g_apppath
+			g_apppath = os.path.abspath(os.path.dirname(argv[0]))
+			filepath = g_apppath+os.sep+'downloaded_files'+os.sep+filename
+			f = file(filepath, 'w+b')
+			f.write(data.data)
+			f.close()
+			QMessageBox.information(None, 'File download success', "File is downloaded successfully at "+filepath+".")
+			return 1
+	@pyqtSlot(str, result=int)
+	def closeWindow(self, action):
+		global g_alertWnd
+		g_alertWnd.closeWindow()
+
+
+
+
+class KMS(QMainWindow):
+	def __init__(self, parent = None):
+		QMainWindow.__init__(self, parent)
+		global g_alert_frame,g_path, g_url
+		self.grid = QGridLayout()
+		#self.clearBtn = QPushButton("Clear Alerts")
+		#self.clearBtn.connect(self.clearBtn, SIGNAL("clicked(bool)"), self.clearGrid)
+		self.view = QWebView(self)
+		g_alert_frame = self.view
+		self.html = """
+	<html>
+				<head>%s</head>
+				<body onLoad="kms_size()"> 
+					<table cellpadding="0" cellspacing="0" border="2px"  id="kms_main">
+					   <tr style="background-color:#4b80ba;height:20px;">
+					     <td >&nbsp;
+						   <img src="%s/kms.png" style="padding-top:2px;" width="20px" height="20x" />
+						   <b style="color:#FFFFFF; padding:5px">Knowledge Management System</b>
+						   
+						 						   </td></tr>   
+					   <tr style="height:535px">
+					      <td valign="top">
+						     <table style="width: inherit;">
+							     <tr>
+								    <td  valign="top" style="border-right:1px solid #CCCCCC;height:600px;">
+									    <table border="1" style="width: 180px;">
+										     <tr onClick="g_start=0;g_end=10;kms_function('kms_inbox','')"><td style="background:#4b80ba">&nbsp;<a name="Inbox"  href="#" style="color:#FFFFFF; text-decoration:none; cursor:pointer"><strong>Inbox</strong></a></td></tr>
+										 <tr onClick="g_start=0;g_end=10;kms_function('kms_central','')"><td style="background:#4b80ba"  >&nbsp;<a name="Inbox" href="#" style="color:#FFFFFF; text-decoration:none; cursor:pointer"><strong>Central Docs</strong></a></td></tr>
+										 <tr onClick="g_start=0;g_end=10;kms_function('kms_my','')"><td style="background:#4b80ba"  >&nbsp;<a name="Inbox" href="#" style="color:#FFFFFF; text-decoration:none;cursor:pointer"><strong>My Docs</strong></a></td></tr>
+										 <tr><td style="background:#4b80ba"  >&nbsp;<a name="Inbox" href="#" style="color:#FFFFFF; text-decoration:none;cursor:pointer"><strong>Admin</strong></a></td></tr>
+										 
+									  </table>					
+								</td>
+								    <td valign="top"><div id="kmspage" style="display:none;border:1px;width:inherit;"></div>
+										<div id="text_page"> </div>
+									</td>
+							 	 </tr>		 
+						 </table>
+					     </td>  
+					   </tr>
+					    <tr height=20px;><td><div class="footer">Designed and maintained by National Informatics Centre (NIC) Government of India.</div></td></tr>
+					</table>
+				</body>
+			</html>	 
+ 
+		
+
+""" % (alertjsfn,g_url)
+		self.grid.addWidget(self.view)
+		self.view.setHtml(self.html)
+		self.view.setMinimumWidth(400)
+		self.view.setMinimumHeight(600)		
+		self.setCentralWidget(self.view)
+		self.alertfn = alertJSFunctions(self)
+		self.view.page().mainFrame().addToJavaScriptWindowObject("alerts", self.alertfn)
+		
+		self.setLayout(self.grid)
+		
+	def initUI(self):
+		self.kmsloginwidget=kmsloginwidget()
+
+	def createToolBar(self):
+		exitAction = QtGui.QAction(QtGui.QIcon('kms_images/exit.png'), '&Exit', self)
+		exitAction.setShortcut('Ctrl+Q')
+		exitAction.setStatusTip('Exit application')
+		exitAction.triggered.connect(self.kmsloginwidget.logout)
+		self.filemenu.addAction(exitAction)
+
+	def setParent(self, parent_):
+		self.parent = parent_
+
+	def hide(self):
+		self.hide()
+
+	def destroyKMSWnd(self):
+		self.parent.closeKmsWindow()
+		self.destroy()
+
+	def setdefaults(self, g_urls, serverObject_):
+		global g_username, g_password, g_url, serverObject, g_logout, default_params
+		#{'id': '', 'url': '', 'version': '', 'pwd': '', 'priority': 'E' , 'is_sound': '1'}
+		self.userid = g_username = g_urls['id']
+		self.password = g_password = g_urls['pwd']
+		#serverObject = serverObject_
+		#print '//////////////////////////////////'
+		#print g_username
+		#print '////////////////////////////////'
+
+		#g_username = 'eoffice'
+		#g_password = 'eoffice'
+		g_url = 'http://10.248.85.133/'
+		serverObject = getServerDeskChatKMS()
+		#serverObject = ''
+		#g_url = g_urls['url']
+		g_logout = 0
+
+def main():
+	app = QApplication(sys.argv)
+	wnd = KMS()
+	wnd.show()
+	app.exec_()
+
+#if __name__=='__main__':
+#	main()
+
+
+
+
+
+
+
+
